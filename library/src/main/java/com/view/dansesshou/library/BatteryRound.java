@@ -11,7 +11,11 @@ import android.graphics.RectF;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.Transformation;
 
 /**
  * Created by dxs on 2018/5/17.
@@ -136,8 +140,13 @@ public class BatteryRound extends View {
     private void resetTextPaint() {
         for (int i = 0; i < col[0].length; i++) {
             if (currentValue >= 0 && currentValue <= col[0][i]) {
-                mTextPaint.setColor(col[1][i]);
-                mPaint.setColor(col[1][i]);
+                if (isShowCharge) {
+                    mPaint.setColor(Color.parseColor("#89c646"));
+                    mTextPaint.setColor(Color.parseColor("#FFFFFF"));
+                }else {
+                    mTextPaint.setColor(col[1][i]);
+                    mPaint.setColor(col[1][i]);
+                }
                 break;
             }
         }
@@ -148,10 +157,14 @@ public class BatteryRound extends View {
     }
 
     private void drawBattery(Canvas canvas) {
-        if(currentValue==0){
-            mPaint.setColor(col[1][0]);
-        }else {
+        if (isShowCharge) {
             mPaint.setColor(Color.WHITE);
+        }else {
+            if(currentValue==0){
+                mPaint.setColor(col[1][0]);
+            }else {
+                mPaint.setColor(Color.WHITE);
+            }
         }
         mPaint.setStyle(Paint.Style.STROKE);
         canvas.drawRoundRect(batteryRecf, batteryRecf.height() / 2, batteryRecf.height() / 2, mPaint);
@@ -164,10 +177,9 @@ public class BatteryRound extends View {
 //        }
         canvas.save();
         mPaint.setStyle(Paint.Style.FILL);
-        float offset = lineW / 2;
-        batterCenterRecf.set(batteryRecf.left + offset, batteryRecf.top + offset, batteryRecf.right - offset, batteryRecf.bottom - offset);
+        batterCenterRecf.set(batteryRecf.left + lineW, batteryRecf.top + lineW, batteryRecf.right - lineW, batteryRecf.bottom - lineW);
         canvas.clipRect(batterCenterRecf.left,batterCenterRecf.top,batterCenterRecf.right*currentValue/100,batterCenterRecf.bottom);
-        canvas.drawRoundRect(batterCenterRecf,batterCenterRecf.height()/2,batterCenterRecf.height()/2, mTextPaint);
+        canvas.drawRoundRect(batterCenterRecf,batterCenterRecf.height()/2,batterCenterRecf.height()/2, mPaint);
         canvas.restore();
     }
 
@@ -232,5 +244,33 @@ public class BatteryRound extends View {
 
     public void setShowCharge(boolean showCharge) {
         isShowCharge = showCharge;
+        if (showCharge) {
+            startAnimation();
+        }else {
+            stopAnimation();
+        }
+        invalidate();
     }
+
+    public void startAnimation(){
+        chargingAnimation.setRepeatCount(-1);
+        chargingAnimation.setRepeatMode(Animation.RESTART);
+        chargingAnimation.setInterpolator(new LinearInterpolator());
+        chargingAnimation.setDuration(1000);
+        this.startAnimation(chargingAnimation);
+    }
+
+    public void stopAnimation(){
+        chargingAnimation.cancel();
+        this.clearAnimation(); 
+    }
+
+    private Animation chargingAnimation = new Animation() {
+        @Override
+        protected void applyTransformation(float interpolatedTime, Transformation t) {
+            super.applyTransformation(interpolatedTime, t);
+            currentValue= (int) (interpolatedTime*100);
+            invalidate();
+        }
+    };
 }
